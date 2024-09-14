@@ -1,6 +1,5 @@
 #!/bin/bash
 echo "alias update='sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y && sudo snap refresh'" >> ~/.bashrc
-sudo timedatectl set-timezone America/New_York
 sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y
 sudo apt remove docker docker-engine docker.io containerd runc -y
 sudo apt update
