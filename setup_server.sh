@@ -122,3 +122,74 @@ sudo ufw allow https
 sudo ufw --force enable
 
 echo -e "${GREEN}Setup completed!${NC}"
+
+# 24/7 Optimierungen
+echo -e "${GREEN}Configuring 24/7 optimizations...${NC}"
+
+# Automatische Updates
+sudo apt install -y unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+# Monitoring Tools
+sudo apt install -y htop iotop sysstat netdata
+
+# Logrotation
+sudo tee /etc/logrotate.d/custom_logs << EOF
+/var/log/syslog
+/var/log/kern.log
+/var/log/auth.log
+{
+    rotate 7
+    daily
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}
+EOF
+
+# Journal Konfiguration
+sudo mkdir -p /etc/systemd/journald.conf.d/
+sudo tee /etc/systemd/journald.conf.d/00-journal-size.conf << EOF
+[Journal]
+SystemMaxUse=1G
+SystemMaxFileSize=100M
+EOF
+
+# System Tuning
+echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
+echo "vm.vfs_cache_pressure=50" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+
+# Monitoring Service
+sudo tee /etc/systemd/system/system-monitor.service << EOF
+[Unit]
+Description=System Monitoring Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vmstat 300
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Aktiviere Services
+sudo systemctl daemon-reload
+sudo systemctl enable system-monitor
+sudo systemctl start system-monitor
+sudo systemctl enable netdata
+sudo systemctl start netdata
+
+# Firewall-Regel für Netdata
+sudo ufw allow 19999/tcp
+
+echo -e "${GREEN}24/7 optimizations completed!${NC}"
+echo -e "${GREEN}Netdata monitoring available at: http://localhost:19999${NC}"
