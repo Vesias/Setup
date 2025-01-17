@@ -123,3 +123,17 @@ Bei Problemen:
 - Einfachere Backup-Strategien
 - Verbesserte I/O-Performance
 - Flexiblere Speicherverwaltung
+
+## Machine Learning Entwicklungsumgebung
+- Python ML-Bibliotheken installiert
+  * PyTorch
+  * TensorFlow
+  * Keras
+  * NumPy, Pandas
+  * Scikit-Learn
+- CUDA-Beispielprojekt zur Überprüfung
+- GPU-beschleunigte Berechnungen
+
+### Entwicklungsumgebung Details
+- Standort: ~/cuda_test
+- Beispielprojekt: Vektor-Addition mit CUDA

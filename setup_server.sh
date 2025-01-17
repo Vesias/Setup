@@ -272,3 +272,71 @@ chown -R mongodb:mongodb /mnt/data/databases/mongodb
 systemctl start postgresql mariadb mongod
 
 echo -e "${GREEN}Datenbank-Migration abgeschlossen${NC}"
+
+# Machine Learning Entwicklungsumgebung
+echo -e "${GREEN}Richte ML-Entwicklungsumgebung ein...${NC}"
+
+# Python ML-Bibliotheken
+pip3 install torch torchvision torchaudio
+pip3 install tensorflow keras
+pip3 install numpy pandas scikit-learn matplotlib seaborn
+
+# CUDA-Beispielprojekt
+mkdir -p ~/cuda_test
+cd ~/cuda_test
+
+cat > vector_add.cu << 'EOF'
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+__global__ void vectorAdd(float *a, float *b, float *c, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        c[i] = a[i] + b[i];
+    }
+}
+
+int main() {
+    int n = 1000000;
+    size_t bytes = n * sizeof(float);
+
+    float *h_a = (float*)malloc(bytes);
+    float *h_b = (float*)malloc(bytes);
+    float *h_c = (float*)malloc(bytes);
+
+    float *d_a, *d_b, *d_c;
+    cudaMalloc(&d_a, bytes);
+    cudaMalloc(&d_b, bytes);
+    cudaMalloc(&d_c, bytes);
+
+    for (int i = 0; i < n; i++) {
+        h_a[i] = 1.0f;
+        h_b[i] = 2.0f;
+    }
+
+    cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+    vectorAdd<<<blocksPerGrid, threadsPerBlock>>>(d_a, d_b, d_c, n);
+
+    cudaMemcpy(h_c, d_c, bytes, cudaMemcpyDeviceToHost);
+
+    printf("Erster Wert: %f\n", h_c[0]);
+
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+    free(h_a);
+    free(h_b);
+    free(h_c);
+
+    return 0;
+}
+EOF
+
+nvcc vector_add.cu -o vector_add
+./vector_add
+
+echo -e "${GREEN}ML-Entwicklungsumgebung eingerichtet${NC}"
