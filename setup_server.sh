@@ -193,3 +193,53 @@ sudo ufw allow 19999/tcp
 
 echo -e "${GREEN}24/7 optimizations completed!${NC}"
 echo -e "${GREEN}Netdata monitoring available at: http://localhost:19999${NC}"
+
+# Optimierte Festplatten-Konfiguration
+echo -e "${GREEN}Konfiguriere Festplatten...${NC}"
+
+# LVM erweitern
+pvcreate /dev/sda3
+vgextend ubuntu-vg /dev/sda3
+lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+resize2fs /dev/ubuntu-vg/ubuntu-lv
+
+# Datenpartition einrichten
+mkdir -p /mnt/data
+mkfs.ext4 -F /dev/sdb2
+mount /dev/sdb2 /mnt/data
+
+# Verzeichnisstruktur erstellen
+mkdir -p /mnt/data/{backups,docker,databases,projects}
+chown -R $USER:$USER /mnt/data
+
+# fstab Eintrag
+echo "UUID=$(blkid -s UUID -o value /dev/sdb2) /mnt/data ext4 defaults,nofail 0 2" >> /etc/fstab
+
+# Datenbanken auf neue Festplatte migrieren
+systemctl stop postgresql mariadb mongod
+
+# PostgreSQL
+mv /var/lib/postgresql /mnt/data/databases/
+ln -s /mnt/data/databases/postgresql /var/lib/postgresql
+chown -R postgres:postgres /mnt/data/databases/postgresql
+
+# MariaDB
+mv /var/lib/mysql /mnt/data/databases/
+ln -s /mnt/data/databases/mysql /var/lib/mysql
+chown -R mysql:mysql /mnt/data/databases/mysql
+
+# MongoDB
+mv /var/lib/mongodb /mnt/data/databases/
+ln -s /mnt/data/databases/mongodb /var/lib/mongodb
+chown -R mongodb:mongodb /mnt/data/databases/mongodb
+
+# Docker Konfiguration
+mkdir -p /mnt/data/docker
+echo '{
+    "data-root": "/mnt/data/docker"
+}' > /etc/docker/daemon.json
+
+# Dienste neustarten
+systemctl restart postgresql mariadb mongod docker
+
+echo -e "${GREEN}Festplatten-Konfiguration abgeschlossen${NC}"
