@@ -107,3 +107,19 @@ Bei Problemen:
 - LVM für flexibles Storage-Management
 - Optimierte Mount-Optionen
 - Automatische Backup-Rotation
+
+## Datenbank-Migration
+- Alle Datenbanken wurden auf /mnt/data/databases/ migriert
+- Symbolische Links in Standardverzeichnissen beibehalten
+- Volle Datensicherheit und Performance-Optimierung
+
+### Datenbank-Pfade
+- PostgreSQL: /mnt/data/databases/postgresql
+- MariaDB: /mnt/data/databases/mysql
+- MongoDB: /mnt/data/databases/mongodb
+
+### Migration Vorteile
+- Separate Speicherung von Systemdaten
+- Einfachere Backup-Strategien
+- Verbesserte I/O-Performance
+- Flexiblere Speicherverwaltung

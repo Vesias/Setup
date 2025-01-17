@@ -243,3 +243,32 @@ echo '{
 systemctl restart postgresql mariadb mongod docker
 
 echo -e "${GREEN}Festplatten-Konfiguration abgeschlossen${NC}"
+
+# Datenbank-Migration auf separate Festplatte
+echo -e "${GREEN}Migriere Datenbanken auf separate Festplatte...${NC}"
+
+# Verzeichnisse erstellen
+mkdir -p /mnt/data/databases
+
+# Dienste stoppen
+systemctl stop postgresql mariadb mongod
+
+# PostgreSQL
+mv /var/lib/postgresql /mnt/data/databases/
+ln -s /mnt/data/databases/postgresql /var/lib/postgresql
+chown -R postgres:postgres /mnt/data/databases/postgresql
+
+# MariaDB
+mv /var/lib/mysql /mnt/data/databases/
+ln -s /mnt/data/databases/mysql /var/lib/mysql
+chown -R mysql:mysql /mnt/data/databases/mysql
+
+# MongoDB
+mv /var/lib/mongodb /mnt/data/databases/
+ln -s /mnt/data/databases/mongodb /var/lib/mongodb
+chown -R mongodb:mongodb /mnt/data/databases/mongodb
+
+# Dienste neustarten
+systemctl start postgresql mariadb mongod
+
+echo -e "${GREEN}Datenbank-Migration abgeschlossen${NC}"
