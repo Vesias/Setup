@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# Farben für Output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo -e "${GREEN}=== Server Setup Script ===${NC}"
+
+# System Update
+echo -e "${GREEN}Updating system...${NC}"
+sudo apt update && sudo apt upgrade -y
+
+# Basic Tools
+echo -e "${GREEN}Installing basic tools...${NC}"
+sudo apt install -y nala cmus sl gdebi wget curl software-properties-common build-essential
+
+# Development Tools
+echo -e "${GREEN}Installing development tools...${NC}"
+# Python
+sudo apt install -y python3-pip python3-venv
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+python3 -m pipx install poetry
+
+# Node.js via nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm install --lts
+
+# Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+
+# Databases
+echo -e "${GREEN}Installing databases...${NC}"
+# PostgreSQL
+sudo apt install -y postgresql postgresql-contrib
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+# MariaDB
+sudo apt install -y mariadb-server mariadb-client
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+
+# MongoDB
+curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
+   sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
+   --dearmor
+echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+   sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+sudo apt update
+sudo apt install -y mongodb-org
+sudo systemctl enable mongod
+sudo systemctl start mongod
+
+# ML und CUDA
+echo -e "${GREEN}Installing ML tools and CUDA...${NC}"
+sudo apt install -y nvidia-cuda-toolkit nvidia-cudnn
+
+# Python ML libraries
+python3 -m pip install --user numpy pandas scikit-learn tensorflow torch solana web3 jupyter
+
+# Solana
+sh -c "$(curl -sSfL https://release.solana.com/v1.17.16/install)"
+
+# Disk Setup
+echo -e "${GREEN}Setting up disks...${NC}"
+# Identifiziere nicht gemountete Festplatten
+DISKS=$(lsblk -r -o NAME,MOUNTPOINT | awk '$2 == "" && length($1) == 3 {print $1}')
+
+if [ -n "$DISKS" ]; then
+    echo -e "${GREEN}Found unmounted disks: $DISKS${NC}"
+    for DISK in $DISKS; do
+        echo -e "${GREEN}Processing /dev/$DISK...${NC}"
+        # Erstelle eine neue Partition
+        sudo parted /dev/$DISK mklabel gpt
+        sudo parted -a opt /dev/$DISK mkpart primary ext4 0% 100%
+        
+        # Formatiere die Partition
+        sudo mkfs.ext4 /dev/${DISK}1
+        
+        # Erstelle Mount-Punkt
+        sudo mkdir -p /mnt/data_${DISK}
+        
+        # Füge zum fstab hinzu
+        echo "/dev/${DISK}1 /mnt/data_${DISK} ext4 defaults 0 2" | sudo tee -a /etc/fstab
+        
+        # Mounte die Partition
+        sudo mount /dev/${DISK}1 /mnt/data_${DISK}
+    done
+fi
+
+# Environment Setup
+echo -e "${GREEN}Setting up environment...${NC}"
+# Python virtuelle Umgebung
+mkdir -p ~/projects/solana_trading
+cd ~/projects/solana_trading
+python3 -m venv venv
+echo "source ~/projects/solana_trading/venv/bin/activate" >> ~/.bashrc
+
+# CUDA Konfiguration
+echo 'export PATH="/usr/local/cuda/bin:$PATH"' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"' >> ~/.bashrc
+
+# Jupyter Konfiguration
+mkdir -p ~/.jupyter
+cat > ~/.jupyter/jupyter_config.py << EOF
+c.NotebookApp.ip = '0.0.0.0'
+c.NotebookApp.open_browser = False
+c.NotebookApp.port = 8888
+EOF
+
+# Firewall Setup
+echo -e "${GREEN}Configuring firewall...${NC}"
+sudo ufw allow ssh
+sudo ufw allow http
+sudo ufw allow https
+sudo ufw --force enable
+
+echo -e "${GREEN}Setup completed!${NC}"
